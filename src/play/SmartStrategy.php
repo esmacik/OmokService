@@ -3,13 +3,25 @@
 
 class SmartStrategy extends Strategy {
 
-    public function makeStrategyMove(Game $gameObject, $playerMoveX, $playerMoveY) {
-        $playerMadeRow = $gameObject->checkGameWon($playerMoveX, $playerMoveY, 1);
-        if (count($playerMadeRow) / 2 == 4) { // Player made 4 in a row
-            // Block potential player win here
-        } elseif (count($playerMadeRow) / 2 == 3) { //Player made 3 in a row
-            // and here
+    public function suggestMove(Game $game) {
+        $c = $game->prevPlayerMove;
+        $pointsToTry = [
+            [$c[0]-1, $c[1]-1],[$c[0], $c[1]-1],[$c[0]+1, $c[1]-1],
+            [$c[0]-1, $c[1]],                   [$c[0]+1, $c[1]],
+            [$c[0]-1, $c[1]+1],[$c[0], $c[1]+1],[$c[0]+1, $c[1]+1]
+        ];
+
+        for ($i = 0; $i < count($pointsToTry); $i += 1) {
+            $attempt = $pointsToTry[$i];
+            $attemptOpposite = $pointsToTry[count($pointsToTry) - 1 - $i];
+            if ($game->board[$attempt[0]][$attempt[1]] == 1) {
+                if ($game->board[$attemptOpposite[0]][$attemptOpposite[1]] == 0)
+                    return [$attemptOpposite[0], $attemptOpposite[1]];
+                else continue;
+            }
         }
 
+        $random = new RandomStrategy();
+        return $random->suggestMove($game);
     }
 }

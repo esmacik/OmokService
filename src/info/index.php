@@ -3,4 +3,6 @@
 require "constants.php";
 
 // Default values returned, per GameInfo class constructor
-echo json_encode(array("size"=>SIZE, "strategies"=>STRATEGIES));
+echo json_encode(array(
+    "size"=>SIZE,
+    "strategies"=>STRATEGIES));

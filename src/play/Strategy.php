@@ -2,6 +2,5 @@
 
 
 abstract class Strategy {
-
-    abstract public function makeStrategyMove(Game $gameObject, $playerMoveX, $playerMoveY);
+    abstract public function suggestMove(Game $game);
 }

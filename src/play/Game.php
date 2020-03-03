@@ -7,6 +7,8 @@ class Game {
 
     var $strategy;
     var $board;
+    var $prevPlayerMove = array(-1, -1);
+    var $prevStrategyMove = array(-1, -1);
     var $movesTaken = 0;
 
     function __construct($size, $strategy) {
@@ -29,32 +31,34 @@ class Game {
      */
     function makePlayerMove($x, $y) {
         $this->board[$x][$y] = 1;
+        $this->prevPlayerMove = array($x, $y);
         $this->movesTaken += 1;
-        $gameWonRow = $this->checkGameWon($x, $y, 1);
+
+        $gameWonRow = $this->getCoordinatesInRow($x, $y, 1);
         if ($gameWonRow)
-            return new Move($x, $y, true, false, $gameWonRow);
-        return new Move($x, $y, false, false, []);
+            return new Move($x, $y, true, $this->checkDraw(), $gameWonRow);
+        return new Move($x, $y, false, $this->checkDraw(), []);
     }
 
     /**
      * Makes opponent move per the provided strategy.
      * @param $strategy Strategy Strategy object that will be used to make move.
-     * @param $playerMoveX int Previous player move X coordinate.
-     * @param $playerMoveY int Previous player move Y coordinate.
      * @return Move Return a move object acknowledging the move made.
      */
-    function makeOpponentMove($strategy, $playerMoveX, $playerMoveY) {
-        $opponentMove = $strategy->makeStrategyMove($this, $playerMoveX, $playerMoveY);
-        $this->movesTaken += 1;
+    function makeOpponentMove($strategy) {
+        $opponentMove = $strategy->suggestMove($this);
         $this->board[$opponentMove[0]][$opponentMove[1]] = 2;
-        $gameWonRow = $this->checkGameWon($opponentMove[0], $opponentMove[1], 2);
+        $this->prevStrategyMove = array($opponentMove[0], $opponentMove[1]);
+        $this->movesTaken += 1;
+
+        $gameWonRow = $this->getCoordinatesInRow($opponentMove[0], $opponentMove[1], 2);
         if ($gameWonRow)
             return new Move($opponentMove[0], $opponentMove[1], true, $this->checkDraw(), $gameWonRow);
         return new Move($opponentMove[0], $opponentMove[1], false, $this->checkDraw(), []);
     }
 
     /**
-     * Check this game's board to determine if a draw occured has been made.
+     * Check this game's board to determine if a draw occurred has been made.
      * @return bool True if draw, false otherwise.
      */
     private function checkDraw() {
@@ -62,31 +66,28 @@ class Game {
     }
 
     /**
-     * If the given move is a winning one, return the coordinates of the win. Otherwise, return null;
+     * If the given move is a winning one, return the coordinates of the win. Otherwise, return null.
      * @param $x int X coordinate of last move.
      * @param $y int Y coordiante of last move.
      * @param $player int 1 for human, 2 for computer
      * @return array|null Array of coordinates if the game has been won, null otherwise.
      */
-    function checkGameWon($x, $y, $player) {
-        if (($result1 = $this->gameWonHelper($x, $y - 1, $player, "n"))[0] + ($result2 = $this->gameWonHelper($x, $y + 1, $player, "s"))[0] >= 4) {
-            $finalResult = $this->getCoordinates($result1, $result2);
-            array_push($finalResult, $x, $y);
-            return $finalResult;
-        } else if (($result1 = $this->gameWonHelper($x + 1, $y, $player, "e"))[0] + ($result2 = $this->gameWonHelper($x - 1, $y, $player, "w"))[0] >= 4) {
-            $finalResult = $this->getCoordinates($result1, $result2);
-            array_push($finalResult, $x, $y);
-            return $finalResult;
-        } else if (($result1 = $this->gameWonHelper($x + 1, $y - 1, $player, "ne"))[0] + ($result2 = $this->gameWonHelper($x - 1, $y + 1, $player, "sw"))[0] >= 4) {
-            $finalResult = $this->getCoordinates($result1, $result2);
-            array_push($finalResult, $x, $y);
-            return $finalResult;
-        } else if (($result1 = $this->gameWonHelper($x - 1, $y - 1, $player, "nw"))[0] + ($result2 = $this->gameWonHelper($x + 1, $y + 1, $player, "se"))[0] >= 4) {
-            $finalResult = $this->getCoordinates($result1, $result2);
-            array_push($finalResult, $x, $y);
-            return $finalResult;
+    function getCoordinatesInRow($x, $y, $player) {
+        $coordinates = null;
+        // Check north and south for a win
+        if ((count($result1 = $this->gameWonHelper($x, $y - 1, $player, "n")) + count($result2 = $this->gameWonHelper($x, $y + 1, $player, "s"))) / 2 >= 4) {
+            $coordinates = array_merge($result1, [$x, $y], $result2);
+        // Check east and west for a win
+        } elseif ((count($result1 = $this->gameWonHelper($x + 1, $y, $player, "e")) + count($result2 = $this->gameWonHelper($x - 1, $y, $player, "w"))) / 2  >= 4) {
+            $coordinates = array_merge($result1, [$x, $y], $result2);
+        // Check northeast and southwest for a win
+        } elseif ((count($result1 = $this->gameWonHelper($x + 1, $y - 1, $player, "ne")) + count($result2 = $this->gameWonHelper($x - 1, $y + 1, $player, "sw"))) / 2 >= 4) {
+            $coordinates = array_merge($result1, [$x, $y], $result2);
+        // Check northwest and southeast for a win
+        } elseif ((count($result1 = $this->gameWonHelper($x - 1, $y - 1, $player, "nw")) + count($result2 = $this->gameWonHelper($x + 1, $y + 1, $player, "se"))) / 2 >= 4) {
+            $coordinates = array_merge($result1, [$x, $y], $result2);
         }
-        return null;
+        return $coordinates;
     }
 
     /**
@@ -99,64 +100,30 @@ class Game {
      * @return array Number of elements searched in the first position, and coordinates.
      */
     private function gameWonHelper($x, $y, $player, $direction) {
-        if ($x < 0 || $y < 0 || $x >= SIZE || $y >= SIZE || $this->board[$x][$y] == 0 || $this->board[$x][$y] != $player)
-            return array(0);
-        $searchResult = array();
+        $searchResult = [];
+        if ($x < 0 || $y < 0 || $x >= SIZE || $y >= SIZE || $this->board[$x][$y] != $player)
+            return array();
         switch ($direction) {
-            case "n":
-                $searchResult = $this->gameWonHelper($x, $y - 1, $player, $direction);
+            case "n": $searchResult = $this->gameWonHelper($x, $y - 1, $player, $direction);
                 break;
-            case "ne":
-                $searchResult = $this->gameWonHelper($x + 1, $y - 1, $player, $direction);
+            case "ne": $searchResult = $this->gameWonHelper($x + 1, $y - 1, $player, $direction);
                 break;
-            case "e":
-                $searchResult = $this->gameWonHelper($x + 1, $y, $player, $direction);
+            case "e": $searchResult = $this->gameWonHelper($x + 1, $y, $player, $direction);
                 break;
-            case "se":
-                $searchResult = $this->gameWonHelper($x + 1, $y + 1, $player, $direction);
+            case "se": $searchResult = $this->gameWonHelper($x + 1, $y + 1, $player, $direction);
                 break;
-            case "s":
-                $searchResult = $this->gameWonHelper($x, $y + 1, $player, $direction);
+            case "s": $searchResult = $this->gameWonHelper($x, $y + 1, $player, $direction);
                 break;
-            case "sw":
-                $searchResult = $this->gameWonHelper($x - 1, $y + 1, $player, $direction);
+            case "sw": $searchResult = $this->gameWonHelper($x - 1, $y + 1, $player, $direction);
                 break;
-            case "w":
-                $searchResult = $this->gameWonHelper($x - 1, $y, $player, $direction);
+            case "w": $searchResult = $this->gameWonHelper($x - 1, $y, $player, $direction);
                 break;
-            case "nw":
-                $searchResult = $this->gameWonHelper($x - 1, $y - 1, $player, $direction);
+            case "nw": $searchResult = $this->gameWonHelper($x - 1, $y - 1, $player, $direction);
                 break;
             default:
                 break;
         }
-
-        $finalResult = array(1, $x, $y);
-        if ($searchResult) {
-            $finalResult[0] += $searchResult[0];
-            array_shift($searchResult);
-            foreach ($searchResult as $value) {
-                array_push($finalResult, $value);
-            }
-        }
-        return $finalResult;
-    }
-
-    /**
-     * Helper function that returns only coordinates of $this->gameWonHelper().
-     * @param $result1 array Array of coordinates with number searched at first position.
-     * @param $result2 array Array of coordinates with number searched at first position.
-     * @return array Array of formatted coordinates.
-     */
-    private function getCoordinates($result1, $result2) {
-        array_shift($result1);
-        array_shift($result2);
-        $finalResult= array();
-        foreach ($result1 as $value)
-            array_push($finalResult, $value);
-        foreach ($result2 as $value)
-            array_push($finalResult, $value);
-        return $finalResult;
+        return array_merge([$x, $y], $searchResult);
     }
 
     /**
@@ -167,11 +134,12 @@ class Game {
     public static function fromJson($gameJsonString) {
         $gameJsonObject = json_decode($gameJsonString);
         $loadedGame = new Game(0, null);
+
         $loadedGame->strategy = $gameJsonObject->strategy;
         $loadedGame->movesTaken = $gameJsonObject->movesTaken;
-        foreach ($gameJsonObject->board as $row) {
-            array_push($loadedGame->board, $row);
-        }
+        $loadedGame->prevPlayerMove = $gameJsonObject->prevPlayerMove;
+        $loadedGame->prevStrategyMove = $gameJsonObject->prevStrategyMove;
+        $loadedGame->board = $gameJsonObject->board;
         return $loadedGame;
     }
 
