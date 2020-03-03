@@ -11,6 +11,12 @@ class Game {
     var $prevStrategyMove = array(-1, -1);
     var $movesTaken = 0;
 
+    /**
+     * Create a new empty game with the given size and strategy.
+     * @param $size int Size of square board ($size * $size).
+     * @param $strategy string Strategy that this game will support. Must be one of the keys defined in $strategiesMap
+     * from constants.php.
+     */
     function __construct($size, $strategy) {
         $this->strategy = $strategy;
         $this->board = array();

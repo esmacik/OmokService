@@ -5,7 +5,8 @@
 require "../info/constants.php";
 require "../play/Game.php";
 
-$enteredStrategy = $_GET[STRATEGY]; // Get user-provided strategy
+// Get user-provided strategy
+$enteredStrategy = $_GET[STRATEGY];
 
 // Check for input errors
 if (!$enteredStrategy) { // No strategy provided
@@ -31,6 +32,7 @@ $blankGame = new Game(SIZE, $enteredStrategy);
 // Write new game with strategy to file at filename
 Game::writeGameToFile($blankGame, $filename);
 
+// Respond with successful resonse
 echo json_encode(array(
     "response"=>true,
     "pid"=>$pid));

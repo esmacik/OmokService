@@ -1,4 +1,5 @@
 <?php
+// Constants true for every Omok game.
 
 define("SIZE", 15);
 define("STRATEGIES", ["Random", "Smart"]);
