@@ -4,7 +4,7 @@
 /**
  * A random strategy for the computer to use.
  */
-class RandomStrategy extends Strategy {
+class RandomStrategy implements Strategy {
 
     /**
      * Suggest a random move for the given game.

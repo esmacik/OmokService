@@ -4,7 +4,7 @@
 /**
  * A smart strategy for the computer to use.
  */
-class SmartStrategy extends Strategy {
+class SmartStrategy implements Strategy {
 
     /**
      * Suggest a smart move for the given game.
